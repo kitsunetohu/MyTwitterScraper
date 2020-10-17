@@ -1,5 +1,6 @@
 from selenium import webdriver
 import time
+import os
 import pandas as pd
 from bs4 import BeautifulSoup
 import xlwings as xw
@@ -8,10 +9,19 @@ import xlwings as xw
 
 #**************#
 url="https://twitter.com/search?q=lang%3Aja%20mihoyo&src=typed_query&f=live"#想爬推文的搜索界面。配合推特高级搜索可搜索特定语言、时间段,也可以直接爬用户界面
-pagenum=3   #想爬多少页（当总页数不足想要爬取页数时，在到达低端时会自动终止）,建议限制在150以下
+pagenum=150   #想爬多少页（当总页数不足想要爬取页数时，在到达低端时会自动终止）,建议限制在150以下
 lang='ja'    #想抓取的语言
 
 #**************#
+
+options = webdriver.ChromeOptions()
+prefs = {
+    'profile.default_content_setting_values': {
+        'images': 2#该设置为屏蔽图片
+    }
+}
+options.add_experimental_option('prefs', prefs)
+
 
 name_out=[]#名字
 comment_out=[]#内容
@@ -74,7 +84,7 @@ def moji2count(crd):
 
 def main():
     pageCount = 0
-    browser = webdriver.Chrome()#准备浏览器
+    browser = webdriver.Chrome(chrome_options=options)#准备浏览器
     browser.get(url)
     time.sleep(2)
 
@@ -88,7 +98,7 @@ def main():
             if browser.execute_script(js1) > old_scroll_height:
                 old_scroll_height = browser.execute_script(js1)#获取到当前页面高度
                 browser.execute_script(js2)  # 操控浏览器进行下拉
-                time.sleep(1.7)
+                time.sleep(2)
             else:
                 break
 
@@ -103,7 +113,6 @@ def main():
                 continue
             if tw_time not in tw_timeList:
                 tw_timeList.append(tw_time)  # 把时间戳添加到列表中
-                print(tw_timeList)
 
                 name_out.extend([get_tweets_name(tweet)])
                 comment_out.extend([get_tweets_comment(tweet)])
@@ -121,7 +130,8 @@ def main():
               "retweet": retweet_out}
 
     df=pd.DataFrame(result)
-
+    print(df)
+    df.to_excel(os.path.join('./data/', 'output.xlsx'))
     wb=xw.Book()
     wb.sheets[0].range('A1').value=df
     print('成功完成爬取，共爬取了'+str(pageCount)+'页')
