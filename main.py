@@ -8,7 +8,7 @@ import xlwings as xw
 
 #**************#
 url="https://twitter.com/search?q=lang%3Aja%20mihoyo&src=typed_query&f=live"#想爬推文的搜索界面。配合推特高级搜索可搜索特定语言、时间段,也可以直接爬用户界面
-pagenum=3    #想爬多少页（当总页数不足想要爬取页数时，在到达低端时会自动终止）,建议限制在150以下
+pagenum=3   #想爬多少页（当总页数不足想要爬取页数时，在到达低端时会自动终止）,建议限制在150以下
 lang='ja'    #想抓取的语言
 
 #**************#
@@ -37,9 +37,7 @@ def get_tweets_comment(star_bs):
     str=''
     tmp = star_bs.find('div', attrs={'lang':lang,'dir': "auto"})
     if tmp is not None:
-        for child in tmp.contents:
-            if child.string is not None:
-                str=str+child.string
+        str=tmp.text
 
     return str
 
@@ -79,7 +77,6 @@ def main():
     browser = webdriver.Chrome()#准备浏览器
     browser.get(url)
     time.sleep(2)
-    pageTxt=""
 
     old_scroll_height = 0  # 表明页面在最上端
     js1 = 'return document.body.scrollHeight'  # 获取页面高度的javascript语句
@@ -91,7 +88,7 @@ def main():
             if browser.execute_script(js1) > old_scroll_height:
                 old_scroll_height = browser.execute_script(js1)#获取到当前页面高度
                 browser.execute_script(js2)  # 操控浏览器进行下拉
-                time.sleep(1.5)
+                time.sleep(1.7)
             else:
                 break
 
@@ -104,9 +101,9 @@ def main():
                 tw_time = tweet.select('time')[0]['datetime']
             except:
                 continue
-            print(tw_time)
             if tw_time not in tw_timeList:
-                tw_timeList.extend(tw_time)  # 把时间戳添加到列表中
+                tw_timeList.append(tw_time)  # 把时间戳添加到列表中
+                print(tw_timeList)
 
                 name_out.extend([get_tweets_name(tweet)])
                 comment_out.extend([get_tweets_comment(tweet)])
