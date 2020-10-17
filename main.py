@@ -1,15 +1,17 @@
 from selenium import webdriver
 import time
 import pandas as pd
-import numpy as np
-import requests
-import re
 from bs4 import BeautifulSoup
 import xlwings as xw
 
-url="https://twitter.com/search?q=lang%3Aja%20mihoyo&src=typed_query"#想爬推文的搜索界面。配合推特高级搜索可搜索特定语言、时间段
-pagenum=4    #想爬多少页
 
+
+#**************#
+url="https://twitter.com/search?q=lang%3Aja%20mihoyo&src=typed_query&f=live"#想爬推文的搜索界面。配合推特高级搜索可搜索特定语言、时间段,也可以直接爬用户界面
+pagenum=3    #想爬多少页（当总页数不足想要爬取页数时，在到达低端时会自动终止）,建议限制在150以下
+lang='ja'    #想抓取的语言
+
+#**************#
 
 name_out=[]#名字
 comment_out=[]#内容
@@ -23,6 +25,9 @@ df=pd.DataFrame({"name":[],
                   "like": [],
                   "retweet": []})
 
+tw_timeList=[]
+
+
 
 def get_tweets_name(star_bs):
     name = star_bs.find('div', attrs={'dir': "auto"}).text
@@ -30,7 +35,7 @@ def get_tweets_name(star_bs):
 
 def get_tweets_comment(star_bs):
     str=''
-    tmp = star_bs.find('div', attrs={'lang':"ja",'dir': "auto"})
+    tmp = star_bs.find('div', attrs={'lang':lang,'dir': "auto"})
     if tmp is not None:
         for child in tmp.contents:
             if child.string is not None:
@@ -93,14 +98,21 @@ def main():
         soup = BeautifulSoup(browser.page_source, 'html.parser')#拉取网页内容
         tweets_bs = soup.find_all(attrs={"data-testid": "tweet"})#找到每条推特
 
-        tweetsNum= len(tweets_bs)
 
         for tweet in tweets_bs:
-            name_out.extend([get_tweets_name(tweet)])
-            comment_out.extend([get_tweets_comment(tweet)])
-            like_out.extend([get_tweets_like_retweet(tweet)[0]])
-            retweet_out.extend([get_tweets_like_retweet(tweet)[1]])
-            date_out.extend([get_tweets_date(tweet)])
+            try:
+                tw_time = tweet.select('time')[0]['datetime']
+            except:
+                continue
+            print(tw_time)
+            if tw_time not in tw_timeList:
+                tw_timeList.extend(tw_time)  # 把时间戳添加到列表中
+
+                name_out.extend([get_tweets_name(tweet)])
+                comment_out.extend([get_tweets_comment(tweet)])
+                like_out.extend([get_tweets_like_retweet(tweet)[0]])
+                retweet_out.extend([get_tweets_like_retweet(tweet)[1]])
+                date_out.extend([get_tweets_date(tweet)])
 
         pageCount = pageCount + 1
         print(str(pageCount) + "/" + str(pagenum))
@@ -115,6 +127,8 @@ def main():
 
     wb=xw.Book()
     wb.sheets[0].range('A1').value=df
+    print('成功完成爬取，共爬取了'+str(pageCount)+'页')
+    input()
 
 
 # Press the green button in the gutter to run the script.
